@@ -1,20 +1,28 @@
-<element name="gantt-chart" attributes="zoom projectStart showZoomControl panStart">
+<element name="gantt-chart" attributes="zoom showZoomControl projectStartDate panStartDate events">
     <template>
         <style>
-            #ganttContainer {
+            @host { 
+              * {
+                display: block;
                 overflow: hidden;
+              }
             }
         </style>
-        <div id="ganttContainer">
-            <div id="timeline">
-                <gantt-chart-timeline showZoomControl="{{showZoomControl}}"
-                                      panStartTimestamp="{{panStart}}" zoom="{{zoom}}"
-                                      startTimestamp="{{projectStart}}"
-                                      secondsPerPixel="{{secondsPerPixel}}"></gantt-chart-timeline>
-            </div>
-            <div id="events">
-                <content select="gantt-chart-events"></content>
-            </div>
+        <div id="timeline">
+            <gantt-chart-timeline 
+                showZoomControl="{{showZoomControl}}"
+                panStartTimestamp="{{panStart}}" 
+                zoom="{{zoom}}"
+                startTimestamp="{{projectStart}}"
+                secondsPerPixel="{{secondsPerPixel}}"></gantt-chart-timeline>
+        </div>
+        <div id="events">
+          <gantt-chart-events 
+              zoom="{{zoom}}" 
+              projectStart="{{projectStart}}"
+              panStart="{{panStart}}"
+              secondsPerPixel="{{secondsPerPixel}}" 
+              events="{{events}}"></gantt-chart-events>
         </div>
     </template>
     <script>
@@ -24,39 +32,11 @@
             projectStart: moment().startOf('month').unix(),
             panStart: moment().startOf('month').unix(),
             secondsPerPixel: 864, // show 1 day as 100px when zoom is 1.0
-            ready: function () {
-                this.zoomChanged();
-                this.projectStartChanged();
-                this.panStartChanged();
-                this.secondsPerPixelChanged();
+            projectStartDateChanged: function() {
+              this.projectStart = moment(this.projectStartDate).unix();
             },
-            zoomChanged: function () {
-                var events = this.querySelector('gantt-chart-events');
-                if (events)
-                    events.zoom = this.zoom;
-            },
-            projectStartChanged: function () {
-                var events = this.querySelector('gantt-chart-events');
-                if (events)
-                    events.projectStart = this.projectStart;
-            },
-            panStartChanged: function () {
-                var events = this.querySelector('gantt-chart-events');
-                if (events)
-                    events.panStart = this.panStart;
-            },
-            secondsPerPixelChanged: function () {
-                var events = this.querySelector('gantt-chart-events');
-                if (events)
-                    events.secondsPerPixel = this.secondsPerPixel;
-            },
-            applyZoom: function (value, reverse) {
-                if (reverse)
-                    return value / this.zoom * this.secondsPerPixel;
-                return value * this.zoom / this.secondsPerPixel;
-            },
-            convertPanStartToCssLeft: function (panStart) {
-                return (this.applyZoom(this.projectStart - panStart)) + 'px'
+            panStartDateChanged: function() {
+              this.panStart = moment(this.panStartDate).unix();
             }
         });
     </script>

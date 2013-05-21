@@ -21,12 +21,16 @@
                 
                 position: relative;
             }
+
+            #zoomControl[showing=false] {
+              display: none;
+            }
         </style>
         <div>
-            <input type="range" min="0.1" max="5" step="0.1" value="{{zoom}}" style="display: none" id="zoomControl">
+            <input type="range" min="0.1" max="5" step="0.1" value="{{zoom}}" showing="{{showZoomControl}}" id="zoomControl">
 
             <div id="timelineContainer">
-                <div id="timeline" on-trackstart="trackStart" on-track="track"
+                <div id="timeline" style="left: {{left}}px" touch-action="pan-y" on-trackstart="trackStart" on-track="track"
                      on-trackend="trackEnd"></div>
             </div>
         </div>
@@ -38,16 +42,12 @@
             startTimestamp: moment().startOf('month').unix(),
             secondsPerPixel: 864, // show 1 day as 100px when zoom is 1.0
             panStartTimestamp: moment().startOf('month').unix(),
-            ready: function () {
-                this.zoomChanged();
-                this.showZoomControlChanged();
-
-                this.$.timeline.setAttribute('touch-action', 'pan-y');
-            },
             insertedCallback: function () {
                 this.reDrawTimeline();
             },
             reDrawTimeline: function () {
+                this.left = this.convertPanStartTimestampToPixels(this.panStartTimestamp);
+                /*
                 console.warn('TODO');
                 var
                         width = this.$.timeline.clientWidth,
@@ -58,6 +58,15 @@
                         moment.unix(timelineEndTimestamp).format('LLLL'),
                         moment.unix(timelineStartTimestamp).diff(moment.unix(timelineEndTimestamp))
                 );
+                */
+            },
+            applyZoom: function (value, reverse) {
+                if (reverse)
+                    return value / this.zoom * this.secondsPerPixel;
+                return value * this.zoom / this.secondsPerPixel;
+            },
+            convertPanStartTimestampToPixels: function (panStartTimestamp) {
+                return (this.applyZoom(this.startTimestamp - panStartTimestamp));
             },
             panStartTimestampChanged: function () {
                 this.reDrawTimeline();
@@ -65,35 +74,24 @@
             zoomChanged: function () {
                 this.reDrawTimeline();
             },
-            showZoomControlChanged: function () {
-                this.$.zoomControl.style.display = this.showZoomControl ? 'block' : 'none';
-            },
             trackStart: function (e) {
                 this.$.timeline.style.cursor = 'move';
                 this.oldPanStartTimestamp = this.panStartTimestamp;
             },
             track: function (e) {
-                this.$.timeline.style.left = this.convertPanStartTimestampToCssLeft(this.newPanStartTimestamp = this.oldPanStartTimestamp - this.applyZoom(e.dx, true));
+                this.newPanStartTimestamp = this.oldPanStartTimestamp - this.applyZoom(e.dx, true);
                 this.panStartTimestamp = this.newPanStartTimestamp;
+                // ensure changes are propagated at next microtask so event positions are updated before painting
+                Platform.flush();
             },
             trackEnd: function (e) {
                 this.$.timeline.style.cursor = null;
-                this.panStartTimestamp = this.newPanStartTimestamp;
-                delete this.oldPanStartTimestamp, this.newPanStartTimestamp;
             },
             startTimestampChanged: function () {
                 this.reDrawTimeline();
             },
             secondsPerPixelChanged: function () {
                 console.warn('TODO');
-            },
-            applyZoom: function (value, reverse) {
-                if (reverse)
-                    return value / this.zoom * this.secondsPerPixel;
-                return value * this.zoom / this.secondsPerPixel;
-            },
-            convertPanStartTimestampToCssLeft: function (panStartTimestamp) {
-                return (this.applyZoom(this.startTimestamp - panStartTimestamp)) + 'px'
             }
         });
     </script>

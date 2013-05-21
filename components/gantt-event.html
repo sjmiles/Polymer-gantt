@@ -1,108 +1,16 @@
-<element name="gantt-event" attributes="message duration start projectStart secondsPerPixel">
+<element name="gantt-event" attributes="message duration start zoom projectStart">
+
+    <link rel="stylesheet" href="gantt-event.css">
 
     <template>
-        <style>
-            @host {
-              * {
-                -webkit-touch-callout: none;
-                -webkit-user-select: none;
-                -khtml-user-select: none;
-                -moz-user-select: none;
-                -ms-user-select: none;
-                user-select: none;
-                display: block;
-              }
-            }
-
-            #ganttrow {
-                padding: 5px 0;
-                margin: 5px 0;
-
-            }
-
-            #thumb {
-                color: #fff;
-                background: #a3abae;
-
-                //color: rgba(10,60,150, 0.8);
-                text-shadow: 1px 2px 2px #def, 0 0 0 #000, 1px 2px 2px #def;
-
-                background-image: -webkit-linear-gradient(rgba(255, 255, 255, .4), rgba(255, 255, 255, 0));
-                background-image: -moz-linear-gradient(rgba(255, 255, 255, .4), rgba(255, 255, 255, 0));
-                background-image: -ms-linear-gradient(rgba(255, 255, 255, .4), rgba(255, 255, 255, 0));
-                background-image: linear-gradient(rgba(255, 255, 255, .4), rgba(255, 255, 255, 0));
-                text-shadow: 0 1px 1px rgba(0, 0, 0, .1);
-                padding: .4em .75em .5em;
-                font-weight: bold;
-                text-decoration: none;
-                border-radius: 5px;
-                margin: 0;
-                line-height: 1.5em;
-                display: inline-block;
-                cursor: pointer;
-                border:1px solid #aaa;
-                box-shadow: 0px 2px 2px rgba(0, 0, 0, .5);
-                text-align: center;
-                font-family: helvetica;
-                font-weight: normal;
-                height: 20px;
-                overflow: hidden;
-                display: inline-block;
-                cursor: auto;
-                position: relative;
-                padding-left: 0;
-                padding-right: 0;
-            }
-
-            .plus {
-                position: absolute;
-                top: 5px;
-                bottom: 0;
-                width: 10px;
-                left:10px;
-               
-            }
-
-            .handle {
-                position: absolute;
-                top: 0;
-                bottom: 0;
-                width: 10px;
-                cursor: pointer;
-            }
-
-            #resizeHandle {
-                //background-color: yellow;
-                right: 1px;
-            }
-
-            #modifyStartHandle {
-                //background-color: red;
-                left: 1px;
-            }
-
-             #resizeHandle:hover {
-                background-color: white;
-                opacity: 0.4;
-                border-radius: 3px;
-            }
-
-            #modifyStartHandle:hover {
-                background-color: white;
-                opacity: 0.4;
-                border-radius: 3px;
-            }
-        </style>
-        <div id="ganttrow">
-            <div id="thumb" on-trackstart="trackStart" on-track="track"
-                 on-trackend="trackEnd">
-                <div id="modifyStartHandle" class="handle" on-trackstart="trackStart" on-track="track"
-                     on-trackend="trackEnd"></div>
-                      <div id="plus" class="plus">+</div>
-                {{messagecalculated}}
-                <div id="resizeHandle" class="handle" on-trackstart="trackStart" on-track="track"
-                     on-trackend="trackEnd"></div>
-            </div>
+        <div id="thumb" touch-action="pan-y" on-trackstart="trackStart" on-track="track"
+              on-trackend="trackEnd">
+            <div id="modifyStartHandle" touch-action="pan-y" class="handle" on-trackstart="trackStart" on-track="track"
+                  on-trackend="trackEnd"></div>
+                  <div id="plus" class="plus">+</div>
+            {{messagecalculated}}
+            <div id="resizeHandle" touch-action="pan-y" class="handle" on-trackstart="trackStart" on-track="track"
+                  on-trackend="trackEnd"></div>
         </div>
     </template>
 
@@ -116,11 +24,25 @@
             zoom: 1.0,
             secondsPerPixel: 864, // show 1 day as 100px when zoom is 1.0
             projectStart: moment().startOf('month').unix(),
+            position: 0,
+            size: 0,
+            cursor: null,
             ready: function () {
-                this.$.resizeHandle.setAttribute('touch-action', 'pan-y');
-                this.$.modifyStartHandle.setAttribute('touch-action', 'pan-y');
-                this.$.thumb.setAttribute('touch-action', 'pan-y');
                 this.durationChanged();
+            },
+            positionChanged: function() {
+                this.$.thumb.style.left = this.position + 'px';
+            },
+            sizeChanged: function() {
+                this.$.thumb.style.width = this.size + 'px';
+            },
+            cursorChanged: function() {
+              this.$.resizeHandle.style.cursor = this.cursor;
+              this.$.modifyStartHandle.style.cursor = this.cursor;
+              this.$.thumb.style.cursor = this.cursor;
+            },
+            projectStartChanged: function () {
+                this.position = this.convertTimeToPixels(this.start);
             },
             messageChanged: function () {
                 this.docalc();
@@ -128,81 +50,69 @@
             docalc: function () {
                 this.messagecalculated = this.message + "";
             },
-            durationChanged: function () {
-                this.$.thumb.style.width = this.convertDurationToCssWidth(this.duration);
-            },
-            convertDurationToCssWidth: function (duration) {
-                return this.applyZoom(duration) + "px";
-            },
-            startChanged: function () {
-                this.$.thumb.style.left = this.convertStartToCssLeft(this.start);
-            },
-            convertStartToCssLeft: function (startValue) {
-                return (this.applyZoom(startValue - this.projectStart)) + "px";
-            },
-            applyZoom: function (value, reverse) {
-                if (reverse)
-                    return value / this.zoom * this.secondsPerPixel;
-                return value * this.zoom / this.secondsPerPixel;
-            },
             zoomChanged: function () {
                 this.startChanged();
                 this.durationChanged();
             },
+            durationChanged: function () {
+                this.size = this.convertDurationToPixels(this.duration);
+            },
+            startChanged: function () {
+                this.position = this.convertTimeToPixels(this.start);
+            },
+            convertDurationToPixels: function (duration) {
+                return this.applyZoom(duration);
+            },
+            convertTimeToPixels: function (time) {
+                return this.applyZoom(time - this.projectStart);
+            },
+            applyZoom: function (value, reverse) {
+                return value * this.zoom / this.secondsPerPixel;
+            },
+            unapplyZoom: function (value) {
+                return value * this.secondsPerPixel / this.zoom;
+            },
             trackStart: function (e) {
                 if (e.target == this.$.resizeHandle) {
                     this.state = 'beingResized';
-                    this.$.resizeHandle.style.cursor = 'e-resize';
+                    this.cursor = 'e-resize';
                     this.oldDuration = this.duration;
-                }
-                else if (e.target == this.$.modifyStartHandle) {
+                } else if (e.target == this.$.modifyStartHandle) {
                     this.state = 'startBeingModified';
-                    this.$.modifyStartHandle.style.cursor = 'w-resize';
+                    this.cursor = 'w-resize';
                     this.oldStart = this.start;
                     this.oldDuration = this.duration;
                 } else if (e.target == this.$.thumb) {
                     this.state = 'beingMoved';
-                    this.$.thumb.style.cursor = 'move';
+                    this.cursor = 'move';
                     this.oldStart = this.start;
                 }
             },
             track: function (e) {
+                var scaledDx = this.unapplyZoom(e.dx);
                 if (this.state == 'beingResized') {
-                    this.$.thumb.style.width = this.convertDurationToCssWidth(this.newDuration = (this.oldDuration + this.applyZoom(e.dx, true)));
+                    this.size = this.convertDurationToPixels(this.newDuration = (this.oldDuration + scaledDx));
                 } else if (this.state == 'startBeingModified') {
-                    this.$.thumb.style.left = this.convertStartToCssLeft(this.newStart = (this.oldStart + this.applyZoom(e.dx, true)));
-                    this.$.thumb.style.width = this.convertDurationToCssWidth(this.newDuration = (this.oldDuration - this.applyZoom(e.dx, true)));
+                    this.position = this.convertTimeToPixels(this.newStart = (this.oldStart + scaledDx));
+                    this.size = this.convertDurationToPixels(this.newDuration = (this.oldDuration - scaledDx));
                 } else if (this.state == 'beingMoved') {
-                    this.$.thumb.style.left = this.convertStartToCssLeft(this.newStart = (this.oldStart + this.applyZoom(e.dx, true)));
+                    this.position = this.convertTimeToPixels(this.newStart = (this.oldStart + scaledDx));
                 }
+                // ensure changes are propagated immediately for better tracking
+                Platform.flush();
             },
             trackEnd: function () {
                 if (this.state == 'beingResized') {
-                    this.$.resizeHandle.style.cursor = null;
                     this.duration = this.newDuration;
                     delete this.oldDuration, this.newDuration;
-                    this.state = null;
                 } else if (this.state == 'startBeingModified') {
-                    this.$.modifyStartHandle.style.cursor = null;
                     this.start = this.newStart;
                     this.duration = this.newDuration;
-                    delete this.oldStart, this.newStart;
-                    delete this.oldDuration, this.newDuration;
-                    this.state = null;
                 } else if (this.state == 'beingMoved') {
-                    this.$.thumb.style.cursor = null;
                     this.start = this.newStart;
-                    delete this.oldStart, this.newStart;
-                    this.state = null;
                 }
-                // make valueChanged calls immediately
-                dirtyCheck();
-            },
-            projectStartChanged: function () {
-                this.$.thumb.style.left = this.convertStartToCssLeft(this.start);
-            },
-            secondsPerPixelChanged: function () {
-                console.warn('TODO');
+                this.cursor = null;
+                this.state = null;
             }
         });
     </script>

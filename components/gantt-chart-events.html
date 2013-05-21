@@ -1,64 +1,37 @@
-<element name="gantt-chart-events" attributes="zoom projectStart secondsPerPixel panStart">
+<link rel="import" href="gantt-event.html">
+<element name="gantt-chart-events" attributes="events zoom secondsPerPixel projectStart panStart">
     <template>
         <style>
             #eventsContainer {
                 position: relative;
             }
         </style>
-        <div id="eventsContainer">
-            <content></content>
+        <div id="eventsContainer" style="left: {{left}}px">
+          <template id="events" repeat="{{event in events}}">
+            <gantt-event
+                message="{{event.thetitle}}"
+                duration="{{event.duration}}"
+                start="{{event.start}}"
+                projectStart="{{projectStart}}"
+                secondsPerPixel="{{secondsPerPixel}}"
+                zoom="{{zoom}}"
+            >...</gantt-event>
+          </template>
         </div>
     </template>
     <script>
         Polymer.register(this, {
             zoom: 1.0,
+            secondsPerPixel: 24 * 60 * 60 / 100, // show 1 day as 100px when zoom is 1.0
             projectStart: moment().startOf('month').unix(),
-            secondsPerPixel: 864, // show 1 day as 100px when zoom is 1.0
             panStart: moment().startOf('month').unix(),
-            ready: function () {
-                this.zoomChanged();
-                this.projectStartChanged();
-            },
-            zoomChanged: function () {
-                var arr = this.querySelectorAll('gantt-event');
-                var length = arr.length,
-                        element = null;
-                for (var i = 0; i < length; i++) {
-                    element = arr[i];
-                    // Do something with element i.
-                    element.zoom = this.zoom;
-                }
-            },
-            projectStartChanged: function () {
-//                alert(this.projectStart);
-                var arr = this.querySelectorAll('gantt-event');
-                var length = arr.length,
-                        element = null;
-                for (var i = 0; i < length; i++) {
-                    element = arr[i];
-                    // Do something with element i.
-                    element.projectStart = this.projectStart;
-                }
-            },
-            secondsPerPixelChanged: function () {
-                var arr = this.querySelectorAll('gantt-event');
-                var length = arr.length,
-                        element = null;
-                for (var i = 0; i < length; i++) {
-                    element = arr[i];
-                    // Do something with element i.
-                    element.secondsPerPixel = this.secondsPerPixel;
-                }
-            },
             panStartChanged: function () {
-                this.$.eventsContainer.style.left = this.convertPanStartToCssLeft(this.panStart);
+                this.left = -this.convertTimeToPixels(this.panStart);
             },
-            convertPanStartToCssLeft: function (panStart) {
-                return (this.applyZoom(this.projectStart - panStart)) + 'px'
+            convertTimeToPixels: function (time) {
+                return this.applyZoom(time - this.projectStart);
             },
-            applyZoom: function (value, reverse) {
-                if (reverse)
-                    return value / this.zoom * this.secondsPerPixel;
+            applyZoom: function (value) {
                 return value * this.zoom / this.secondsPerPixel;
             }
         });
